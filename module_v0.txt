@@ -1,0 +1,129 @@
+
+MOON_LIMB_STARE_PS & NADIR_STARE_PS (FIRST LOOK, obsid = 245, 244)
+
+
+1a) module comb_cts_fit  ==> calibrate the frequency scale by fitting the comb with function (sinc2)
+input  : obsid_comb & comb_index : (usually 1 index only taken for each observations)
+output : freq_calib(x=channel_index) = f = 6496.291429 - 0.099271*x
+1b) plot_L01B_comb_cts_counts_fit_vs_comb_window
+==> STANDBY for now
+
+2a) module cts_counts_to_continuum   [CCTS = continuum = <cts(freqIF)> ]
+input : obsid,cts,index_list
+output  : ccts = average frequency cts channels versus  index_list ;
+output2 : on_index_list, off=sky_index_list ; onoff_index_list (OFF-ON ; ON-OFF ; OFF-ON; ...) 
+output3 : best_sky_ccts_index_list = best ccts_sky_index_list
+(e.g ONOFF;SKY ~5th order polynomial fit raw counts derivative vs time_index < threshold= ~2%)
+2b) plot_L01B_onoff_ccts_counts_vs_index_list         
+
+3a) module ave_sky_cts_counts : compute the averaged of the best_off_list positions (i.e deep_sky=cold) for possible TSYS computation
+input   : obsid, best_sky_list
+output  : best_sky_cts_counts_vs_freqIF = <SKY(freq_if,bias)>
+output2 : best_sky_ccts_counts          = <SKY(bias)>
+3b) plot_L01B_ave_sky_cts_count_vs_freqIF + overlay best_sky_ccts_counts 
+
+4a) module ave_onoff_cts_count : compute the average of the ON-OFF positions (i.e., deep sky = cold)
+input   : obsid, best_onoff_list
+output  : onoff_cts_counts_vs_freqIF  = <ONOFF(freq_if,bias)>  = <OFF-ON-ON-OFF-OFF-ON-ON-OFF...>
+output2 : onoff_ccts_counts           = <ONOFF(bias)>
+4b) plot_L01B_ave_onoff_cts_counts_vs_freqIF + overlay onoff_ccts_count 
+
+
+5a) module tsys_cts_internal  ==> calibrate the optimal tsys for a given observation with internal Hot load :
+input  : COLD : obsid_sky & best_off_list [  <SKY(freq_if)> from module sky_averaged ]
+input  : HOT  : obsid_hot & hot_index_list (usually 1 index only)
+output : <HOT(freq_if,bias)>
+output : TSYS(freq_if,bias)
+output : compute TSYS average and Standard deviation
+
+input2  : CHSW : channel smoothing window : i.e. to decrease the noise (e.g. 10-100 channels, to be optimized)
+by applying a "moving average" procedure, taking care to the IF edges 
+output2 : TSYS_CHSW(freq_if,bias,chsw) + (in the future copy TSYS(freq_if,bias,cts/acs) to a database )
+possible example : https://en.wikipedia.org/wiki/Moving_average
+5b) plot_L01B_tsys_cts_internal_vs_freqIF + overlay TSYS_CHSW(freq_if,bias,chsw) 
+
+
+6a) module apply_tsys_cts
+input  : ON :  obsid_sky_on  & sky_on_index_list
+input  : OFF : obsid_sky_off & sky_off_index_list
+Ta = TSYS_CHSW(freq_if)*(ON/OFF-1)  ( final ONOFF Antenna Temperature (TA) calibrated spectra)
+freq_calib(x=channel_index) = f = 6496.291429 - 0.099271*x
+6b) plot_L01B_ta_cts_vs_index_list     :  Ta(freqIF,bias) vs index_list (to check quality / stability )
+6c) plot_L01B_ave_ta_cts_vs_index_list : <Ta(freqIF,bias)>
+
+
+7a) module write_l01B_spectra
+input  : obsid
+input  : side_band (i.e USB, LSB, USB), IF_freq, lo_freq, bias
+input  : format (e.g. netcdf;  ascii; fits )
+output : Ta(freqIF,bias) vs index  or/and <Ta(freqIF,bias)>
+
+
+
+
+
+
+
+==================================================================================================
+
+1a) module comb_fit ==> calibrate the frequency scale by fitting the comb with function (sinc2) 
+
+determined COMB frequencies results by fitting  function (sinc2 )
+and these data form the frequency as well as measure of
+channel widths anchors at the comb peak locations.
+
+Fitting a straight line to the determined COMB frequencies results in the relationship between channel index
+(x) and frequency (y), 1) y = 6496.4979 − 0.0993 ∗ x for CTS1, and 2) y = 6496.0402 − 0.0993 ∗ x for
+CTS2. This IF frequency scale is then converted to USB and LSB frequency scale by adding and subtracting
+
+Comb Id
+0
+1
+2
+3
+4
+5
+6
+7
+8
+Comb Channel
+972
+1979
+2987
+3994
+5001
+6009
+7016
+8023
+9031
+Comb Freq. [MHz]
+6400
+6300
+6200
+6100
+6000
+5900
+5800
+5700
+5600
+Fit FWHM [chan]
+1.27
+1.36
+1.45
+1.42
+2.11
+2.07
+1.57
+1.74
+1.56
+Fit Channel
+972.032
+1979.16
+2986.99
+3994.12
+5001.47
+6008.78
+7016.02
+8023.36
+9030.77
+

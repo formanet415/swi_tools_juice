@@ -1297,6 +1297,9 @@ def plot_line_mcontinuum_2D(ds, linename, linefreq, linewidth, ch, sb, pole=None
     # Doppler shift of the line frequency
     linefreq = linefreq-ds.VEL_RADIAL.data[0]/c_kmps*linefreq
 
+    # set default matplotlib fontsize to 14
+    plt.rcParams.update({'font.size': 14})
+
     # Implementation: start by applying ATCT offset
     A2 = ds.ANGULAR.data / 2
     deltas_file = os.path.join('pointing_offsets', f'deltas_{int(ds.OBSID.data[0])}.txt')
@@ -1351,10 +1354,10 @@ def plot_line_mcontinuum_2D(ds, linename, linefreq, linewidth, ch, sb, pole=None
             plt.gca().xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
             plt.xlabel('Frequency (GHz)')
             plt.ylabel(r'$T_{RJ}$ (K)')
-            plt.title(f'Spectrum for record {idx + 1} | AT: {ds.AT.data[idx]:.2f}, CT: {ds.CT.data[idx]:.2f} | Line: {linename}')
+            plt.title(f'Spectrum for record {idx + 1} | AT: {ds.AT.data[idx]:.2f}, CT: {ds.CT.data[idx]:.2f} | Line: {linename}',fontsize=16)
             plt.legend()
             plt.grid()
-            plt.savefig(os.path.join(debug_folder, f'spectrum_record_{idx + 1}_{linename}.png'))
+            plt.savefig(os.path.join(debug_folder, f'spectrum_record_{idx + 1}_{linename}.jpg'))
             plt.close()
 
     line_minus_continuum = np.array(line_minus_continuum)
@@ -1370,12 +1373,12 @@ def plot_line_mcontinuum_2D(ds, linename, linefreq, linewidth, ch, sb, pole=None
     else:
         savefig=False
         fig, ax = plt.subplots(figsize=(8, 6))
-    scatter = ax.scatter(AT, CT, c=line_minus_continuum, cmap='cividis', s=200)
+    scatter = ax.scatter(AT, CT, c=line_minus_continuum, cmap='viridis', s=200)
     plt.colorbar(scatter, ax=ax,label=f'{linename} Line - Continuum (K)')
     ax.set_xlabel('AT  (arcmin)')
     ax.set_ylabel('CT  (arcmin)')
     
-    ax.set_title(f'2D Plot of {linename} Line - Continuum')
+    ax.set_title(f'2D Plot of {linename} Line - Continuum', fontsize=16)
 
 
     if pole:
@@ -1389,7 +1392,7 @@ def plot_line_mcontinuum_2D(ds, linename, linefreq, linewidth, ch, sb, pole=None
     ax.add_patch(Circle((0,0), A2[0], edgecolor='red', facecolor='none', lw=1.5))
     ax.set_aspect(1)
     if savefig:
-        plt.savefig(f"Figures/2DLineContinuum_{int(ds.OBSID.data[0])}_{linename}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"Figures/2DLineContinuum_{int(ds.OBSID.data[0])}_{linename}.jpg", dpi=300, bbox_inches='tight')
         plt.show()
 
     # st.plot_line_mcontinuum_2D(ds, "H2O", 1207.63873, 0.2, 2, "LSB")
@@ -1486,10 +1489,10 @@ def plot_doppler_shift_2D(ds, linename, linefreq, linewidth, ch, sb, pole=None, 
                 plt.gca().xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
                 plt.xlabel('Frequency (GHz)')
                 plt.ylabel(r'$T_{RJ}$ (K)')
-                plt.title(f'Fit for record {idx + 1} | AT: {ds.AT.data[idx]:.2f}, CT: {ds.CT.data[idx]:.2f} | Doppler Shift: {doppler_shift:.2f} ± {sigma_doppler_shift:.2f} km/s')
+                plt.title(f'Fit for record {idx + 1} | AT: {ds.AT.data[idx]:.2f}, CT: {ds.CT.data[idx]:.2f} | Doppler Shift: {doppler_shift:.2f} ± {sigma_doppler_shift:.2f} km/s', fontsize=16)
                 plt.legend()
                 plt.grid()
-                plt.savefig(os.path.join(debug_folder, f'absorption_fit_rec_{idx + 1}.png'))
+                plt.savefig(os.path.join(debug_folder, f'absorption_fit_rec_{idx + 1}.jpg'))
                 plt.close()
 
         except RuntimeError:
@@ -1520,7 +1523,7 @@ def plot_doppler_shift_2D(ds, linename, linefreq, linewidth, ch, sb, pole=None, 
     plt.colorbar(scatter, label=f'{linename} Velocity (m/s)')
     plt.xlabel('AT (arcmin)')
     plt.ylabel('CT (arcmin)')
-    plt.title(f'Doppler shift 2D map, {linename}')
+    plt.title(f'Doppler shift 2D map, {linename}', fontsize=16)
     plt.gca().add_patch(Circle((0, 0), A2[0]*60, edgecolor='red', facecolor='none', lw=1.5))
     r=A2[0]*60
 
@@ -1534,7 +1537,7 @@ def plot_doppler_shift_2D(ds, linename, linefreq, linewidth, ch, sb, pole=None, 
     color='black',linestyle='--')
 
     plt.gca().set_aspect(1)
-    plt.savefig(f"Figures/2DDopplerShift_{int(ds.OBSID.data[0])}.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"Figures/2DDopplerShift_{int(ds.OBSID.data[0])}.jpg", dpi=300, bbox_inches='tight')
     plt.show()
 
     # Plot the uncertainty of the doppler shift (same plot but showing the uncertainty)
@@ -1544,13 +1547,13 @@ def plot_doppler_shift_2D(ds, linename, linefreq, linewidth, ch, sb, pole=None, 
     plt.colorbar(scatter, label=f'{linename} Velocity Uncertainty (m/s)')
     plt.xlabel('AT (arcmin)')
     plt.ylabel('CT (arcmin)')
-    plt.title(f'Doppler shift uncertainty 2D map, {linename}')
+    plt.title(f'Doppler shift uncertainty 2D map, {linename}', fontsize=16)
     plt.gca().add_patch(Circle((0, 0), A2[0]*60, edgecolor='red', facecolor='none', lw=1.5))
     if pole:
         plt.plot([np.cos(np.deg2rad(pole)) * r, -np.cos(np.deg2rad(pole)) * r],
                  [np.sin(np.deg2rad(pole)) * r, -np.sin(np.deg2rad(pole)) * r], color='black', linestyle='--')
     plt.gca().set_aspect(1)
-    plt.savefig(f"Figures/2DDopplerShiftUncertainty_{int(ds.OBSID.data[0])}.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"Figures/2DDopplerShiftUncertainty_{int(ds.OBSID.data[0])}.jpg", dpi=300, bbox_inches='tight')
     plt.show()
 
     polar_angle_full = ds.POLAR_ANG.data

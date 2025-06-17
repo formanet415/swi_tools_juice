@@ -1,0 +1,1 @@
+/example/path/replace/with/your/own/and/remove/template/from/filename/

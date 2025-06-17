@@ -1,5 +1,6 @@
 # Python library for loading L01B SWI data 
 # The goal of this library is to load raw SWI data and perform calibration to physical units.
+# The functions implement the functionality as defined in the module description "module_v0.txt"
 
 # Unless the goal of your work is to refine the data calibration, the use of this library is discouraged, 
 # use the switools library instead which works for L1 data.
@@ -27,6 +28,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
+import matplotlib.dates as mdates
 
 # we follow the structure from module_v0.txt
 
@@ -177,7 +179,7 @@ class SWIDataLoader:
         return self.ccts, self.onoff, self.qflag
             
 
-    def plot_L01B_onoff_ccts_counts_vs_index_list(self, index_list = None, observation_mode = 'Nadir_stare', manualbestsky = False):
+    def plot_L01B_onoff_ccts_counts_vs_index_list(self, index_list = None, observation_mode = 'Nadir_stare', manualbestsky = False, versus='index', limbcrossing=None):
         # Run the cts_counts_to_continuum method first and then plot the results. the on/off index list is used to plot the data.
         # Comb, on and off data are plotted using different colors and markers.
         # grid is set to True, xlabel is set to "Index", ylabel is set to "Counts per cycle"
@@ -186,36 +188,60 @@ class SWIDataLoader:
         # there are two subplots next to each other, one for receiver 1 and one for receiver 2
         # The legend is set to "Comb", "On", "Off"
         # the average (excluding comb) is plotted as a horizontal line
+
+        plt.rcParams.update({'font.size': 14})
         
         ccts, onoff, qflag = self.cts_counts_to_continuum(index_list)
-        fig, axs = plt.subplots(1, 2, figsize=(15, 5))
-        fig.suptitle('LO1B data '+self.fname + ' ' + str(self.data.GMT.data[0]))
-        axs[0].set_title('Receiver 1, BIAS = '+str(self.obstable['BIAS1'][0])+', LO1='+str(self.obstable['LO1'][0])+' GHz')
-        axs[1].set_title('Receiver 2, BIAS = '+str(self.obstable['BIAS2'][0])+', LO2='+str(self.obstable['LO2'][0])+' GHz')
+        fig, axs = plt.subplots(1, 2, figsize=(15, 4.7))
+        fig.suptitle('L01B data ObsID='+str(self.obsid) + ' ' + str(self.data.GMT.data[0][0:22]), fontsize=16)
+        axs[0].set_title('Receiver 1, BIAS = '+str(self.obstable['BIAS1'][0])+', LO1='+str(self.obstable['LO1'][0])+' GHz', fontsize=16)
+        axs[1].set_title('Receiver 2, BIAS = '+str(self.obstable['BIAS2'][0])+', LO2='+str(self.obstable['LO2'][0])+' GHz', fontsize=16)
 
         # x axis - index number
-        x = np.arange(len(onoff))
-
+        if versus=='index':
+            x = np.arange(len(onoff))
+        else:
+            x = np.array([datetime.strptime(self.data.GMT.data[i], '%Y-%m-%dT%H:%M:%S.%f') for i in range(0, len(onoff)*2, 2)])
+            
         axs[0].plot(x[onoff!=-2], ccts[0][onoff!=-2], 'ko')
         axs[1].plot(x[onoff!=-2], ccts[1][onoff!=-2], 'ko')
-        axs[0].plot(x[onoff==-1], ccts[0][onoff==-1], 'ro', label='Comb')
+        axs[0].plot(x[onoff==-1], ccts[0][onoff==-1], 'mo', label='Comb')
         axs[0].plot(x[onoff==-2], ccts[0][onoff==-2], 'r^', label='Hot')
-        axs[0].plot(x[onoff==0], ccts[0][onoff==0], 'bo', label='Sky')
+        axs[0].plot(x[onoff==0], ccts[0][onoff==0], 'o', color='deepskyblue', label='Sky')
         axs[0].plot(x[onoff==1], ccts[0][onoff==1], 'go', label='On')
-        axs[1].plot(x[onoff==-1], ccts[1][onoff==-1], 'ro', label='Comb')
+        axs[1].plot(x[onoff==-1], ccts[1][onoff==-1], 'mo', label='Comb')
         axs[1].plot(x[onoff==-2], ccts[1][onoff==-2], 'r^', label='Hot')
-        axs[1].plot(x[onoff==0], ccts[1][onoff==0], 'bo', label='Sky')
+        axs[1].plot(x[onoff==0], ccts[1][onoff==0], 'o', color='deepskyblue', label='Sky')
         axs[1].plot(x[onoff==1], ccts[1][onoff==1], 'go', label='On')
+
+        # plot limb crossing as vertical dashed line if it is, 
+        if limbcrossing:
+            # convert string to datetime
+            limbcrossing = datetime.strptime(limbcrossing, '%Y-%m-%dT%H:%M:%S')
+            axs[0].axvline(limbcrossing, color='magenta', linestyle='--', label='Limb crossing')
+            axs[1].axvline(limbcrossing, color='magenta', linestyle='--', label='Limb crossing')
+
+        axs[0].set_xlabel('Index')
+        axs[1].set_xlabel('Index')
+        # if versus not 'index', set the x axis to date format
         
-        axs[0].axhline(np.mean(ccts[0][1:]), color='black', linestyle='-.', label='Mean')
-        axs[1].axhline(np.mean(ccts[1][1:]), color='black', linestyle='-.', label='Mean')
+
+        if versus != 'index':
+            myFmt = mdates.DateFormatter('%H:%M')
+            axs[0].xaxis.set_major_formatter(myFmt)
+            axs[1].xaxis.set_major_formatter(myFmt)
+            axs[0].set_xlabel('Time (UTC)')
+            axs[1].set_xlabel('Time (UTC)')
+            
+        
+        #axs[0].axhline(np.mean(ccts[0][1:]), color='black', linestyle='-.', label='Mean')
+        #axs[1].axhline(np.mean(ccts[1][1:]), color='black', linestyle='-.', label='Mean')
         # left middle
         axs[0].legend(loc = 'center left')
         axs[1].legend(loc = 'center left')
         axs[0].grid(True)
         axs[1].grid(True)
-        axs[0].set_xlabel('Index')
-        axs[1].set_xlabel('Index')
+        
         axs[0].set_ylabel('Counts per cycle')
         axs[1].set_ylabel('Counts per cycle')
 
@@ -230,21 +256,21 @@ class SWIDataLoader:
             stdon2 = np.std(ccts[1][onoff==1])
             stdoff2 = np.std(ccts[1][onoff==0])
             # draw a line at the average of the on and off +- std, no labels
-            axs[0].axhline(meanon1, color='green', linestyle='--')
-            axs[0].axhline(meanon1+stdon1, color='green', linestyle=':')
-            axs[0].axhline(meanon1-stdon1, color='green', linestyle=':')
-            axs[0].axhline(meanoff1, color='blue', linestyle='--')
-            axs[0].axhline(meanoff1+stdoff1, color='blue', linestyle=':')
-            axs[0].axhline(meanoff1-stdoff1, color='blue', linestyle=':')
-            axs[1].axhline(meanon2, color='green', linestyle='--')
-            axs[1].axhline(meanon2+stdon2, color='green', linestyle=':')
-            axs[1].axhline(meanon2-stdon2, color='green', linestyle=':')
-            axs[1].axhline(meanoff2, color='blue', linestyle='--')
-            axs[1].axhline(meanoff2+stdoff2, color='blue', linestyle=':')
-            axs[1].axhline(meanoff2-stdoff2, color='blue', linestyle=':')
+            #axs[0].axhline(meanon1, color='green', linestyle='--')
+            #axs[0].axhline(meanon1+stdon1, color='green', linestyle=':')
+            #axs[0].axhline(meanon1-stdon1, color='green', linestyle=':')
+            #axs[0].axhline(meanoff1, color='blue', linestyle='--')
+            #axs[0].axhline(meanoff1+stdoff1, color='blue', linestyle=':')
+            #axs[0].axhline(meanoff1-stdoff1, color='blue', linestyle=':')
+            #axs[1].axhline(meanon2, color='green', linestyle='--')
+            #axs[1].axhline(meanon2+stdon2, color='green', linestyle=':')
+            #axs[1].axhline(meanon2-stdon2, color='green', linestyle=':')
+            #axs[1].axhline(meanoff2, color='blue', linestyle='--')
+            #axs[1].axhline(meanoff2+stdoff2, color='blue', linestyle=':')
+            #axs[1].axhline(meanoff2-stdoff2, color='blue', linestyle=':')
         
         plt.tight_layout()
-        plt.savefig(self.fname + '_onoff_ccts_counts_vs_index_list.png', dpi=300, bbox_inches='tight')
+        plt.savefig(self.fname + '_onoff_ccts_counts_vs_index_list.jpg', dpi=300, bbox_inches='tight')
         plt.show()
 
         if manualbestsky:
