@@ -1,6 +1,5 @@
 # Python library for loading L01B SWI data 
 # The goal of this library is to load raw SWI data and perform calibration to physical units.
-# The functions implement the functionality as defined in the module description "module_v0.txt"
 
 # Unless the goal of your work is to refine the data calibration, the use of this library is discouraged, 
 # use the switools library instead which works for L1 data.
@@ -285,6 +284,85 @@ class SWIDataLoader:
             self.best_sky_list[getindexes(sidx)] = 1
             return self.best_sky_list
     
+    def plot_FS_quicklook(self):
+        """
+        Generates quicklook plots for the Frequency Switch (FS) data.
+
+        This function averages the spectra corresponding to the first two unique local oscillator (LO) frequencies
+        from the observation table, excluding the comb signals. It then computes the difference between the two
+        averaged signals for both receivers and creates two sets of plots:
+        1. Subtracted signals for each receiver.
+        2. Overlaid signals for both LO frequencies for each receiver.
+
+        The resulting plots are saved as JPG files.
+        """
+        
+        # Get unique local oscillator frequencies
+        lo1s = np.unique(self.obstable.LO1)
+        lo2s = np.unique(self.obstable.LO2)
+
+        # Average the spectra corresponding to LO1=lo1s[0] (excluding comb signals)
+        lomask1 = np.logical_and(self.obstable.LO1 == lo1s[0], 
+                                 self.obstable.COMB == '0')
+        cts1lo1 = np.mean(self.cts1[lomask1], axis=0)
+        cts2lo1 = np.mean(self.cts2[lomask1], axis=0)
+
+        # Average the spectra corresponding to LO1=lo1s[1] (excluding comb signals)
+        lomask2 = np.logical_and(self.obstable.LO1 == lo1s[1],
+                                 self.obstable.COMB == '0')
+        cts1lo2 = np.mean(self.cts1[lomask2], axis=0)
+        cts2lo2 = np.mean(self.cts2[lomask2], axis=0)
+
+        # Compute the difference between the two signals for both receivers
+        y1 = cts1lo1 - cts1lo2
+        y2 = cts2lo1 - cts2lo2
+
+        # Create subplots for the subtracted signals
+        fig, axs = plt.subplots(1, 2, figsize=(15, 5))
+        fig.suptitle('Quicklook ' + self.fname, fontsize=16)
+        axs[0].set_title('Receiver 1, subtracted LOs: ' + str(lo1s[0]) + ' - ' + str(lo1s[1]) + ' (GHz)', fontsize=16)
+        axs[1].set_title('Receiver 2, subtracted LOs: ' + str(lo2s[0]) + ' - ' + str(lo2s[1]) + ' (GHz)', fontsize=16)
+
+        # Set x axis - frequency channels and plot the subtracted signals
+        x = np.arange(len(y1))
+        axs[0].plot(x, y1, 'black')
+        axs[1].plot(x, y2, 'black')
+        axs[0].grid(True)
+        axs[1].grid(True)
+        axs[0].set_xlabel('Frequency channel')
+        axs[1].set_xlabel('Frequency channel')
+        axs[0].set_ylabel('Counts per cycle')
+        axs[1].set_ylabel('Counts per cycle')
+        plt.tight_layout()
+        plt.savefig(self.fname + '_quicklook.jpg', dpi=300, bbox_inches='tight')
+        plt.show()
+
+        # Create subplots for both LOs overlaid
+        fig, axs = plt.subplots(1, 2, figsize=(15, 5))
+        fig.suptitle('Quicklook ' + self.fname, fontsize=16)
+        axs[0].set_title('Receiver 1, both LOs: ' + str(lo1s[0]) + ' & ' + str(lo1s[1]) + ' (GHz)', fontsize=16)
+        axs[1].set_title('Receiver 2, both LOs: ' + str(lo2s[0]) + ' & ' + str(lo2s[1]) + ' (GHz)', fontsize=16)
+
+        # Plot both LO signals for each receiver
+        axs[0].plot(x, cts1lo1, 'r-', label='LO1=' + str(lo1s[0]) + ' GHz')
+        axs[0].plot(x, cts1lo2, 'b:', label='LO2=' + str(lo1s[1]) + ' GHz')
+        axs[1].plot(x, cts2lo1, 'r-', label='LO1=' + str(lo2s[0]) + ' GHz')
+        axs[1].plot(x, cts2lo2, 'b:', label='LO2=' + str(lo2s[1]) + ' GHz')
+        axs[0].grid(True)
+        axs[1].grid(True)
+        axs[0].set_xlabel('Frequency channel')
+        axs[1].set_xlabel('Frequency channel')
+        axs[0].set_ylabel('Counts per cycle')
+        axs[1].set_ylabel('Counts per cycle')
+        axs[0].legend()
+        axs[1].legend()
+        plt.tight_layout()
+        plt.savefig(self.fname + '_quicklook_bothlos.jpg', dpi=300, bbox_inches='tight')
+        plt.show()
+
+
+
+
     def set_best_sky_list(self, best_sky_list):
         self.best_sky_list = np.zeros(len(self.onoff))
         self.best_sky_list[getindexes(best_sky_list)] = 1
