@@ -21,7 +21,7 @@ Supervised by Raphaël Moreno
 """
 
 
-def load(obsid):
+def load(obsid, version='max'):
     """
     Loads L1 data for a given obsID
     input:
@@ -31,10 +31,14 @@ def load(obsid):
     """
     # look for the L1 data file in DR-SWI/database-L1/L1_<obsid>*.nc
     # load the file with xarray
-    ext = '.nc'
+    absoluteorrelativedirectory = 'DR-SWI/database-L1/'
+    if version=='max':
+        version=''
+
+    ext = version+'.nc'
     if obsid==228:
         ext = 'TAC.nc' # it is likely this can be removed at some point in the future
-    fnames = os.listdir('DR-SWI/database-L1/')
+    fnames = os.listdir(absoluteorrelativedirectory)
     fnames = [f for f in fnames if f.startswith('L1_') and f.endswith(ext)]
     fnames = [f for f in fnames if str(obsid) in f]
     if len(fnames) == 0:
@@ -45,8 +49,10 @@ def load(obsid):
         print(f'Warning: Multiple L1 data files found for obsID {obsid}: {fnames}')
         print(f'Using {fnames[0]}')
         
+    
     fname = fnames[0]
-    ds = xr.open_dataset(os.path.join('DR-SWI/database-L1/', fname))
+
+    ds = xr.open_dataset(os.path.join(absoluteorrelativedirectory, fname))
     print("Loaded",fname)
     return ds
 
@@ -534,8 +540,8 @@ def fit_main_beam_1D(ds, verbose = False, choice="CCH", plotstuff=False, lim=150
         plt.subplots_adjust(top=0.9)  # Adjust the top padding to move the suptitle closer to the plot
 
         # Add legends and save the plot
-        axes[0].legend(loc=8)
-        axes[1].legend(loc=8)
+        axes[0].legend(loc=8,fontsize=9)
+        axes[1].legend(loc=8,fontsize=9)
         plt.savefig(f"Figures/Fitted1DScan_{scan}_{int(ds.OBSID.data[0])}.png", dpi=300, bbox_inches='tight')
         plt.show()
     
@@ -772,6 +778,27 @@ def full_beam_pattern(ds, nskyindexes=15, start = 0, end = -1, method="threepoin
         raise NotImplementedError
     else:
         raise NotImplementedError
+    
+    # save the differentiated data to a file
+    diff_data = {
+        'theta1': theta1,
+        'dCH1dtheta': dCH1dtheta,
+        'sdCH1dtheta': sdCH1dtheta,
+        'theta2': theta2,
+        'dCH2dtheta': dCH2dtheta,
+        'sdCH2dtheta': sdCH2dtheta
+    }
+    # save ascii
+    diff_file = os.path.join('differentiated', f'diff_data_{int(ds.OBSID.data[0])}.txt')
+    if not os.path.exists('differentiated'):
+        os.makedirs('differentiated')
+    np.savetxt(diff_file, 
+               np.column_stack((theta1[1:-1], dCH1dtheta, sdCH1dtheta, theta2[1:-1], dCH2dtheta, sdCH2dtheta)), 
+               header='theta1 dCH1dtheta sdCH1dtheta theta2 dCH2dtheta sdCH2dtheta', 
+               fmt='%f')
+    print(f"Saved differentiated data to {diff_file}")
+
+
     
     # commented for now
     #theta1 = theta1 - theta1[np.argmax(dCH1dtheta)]
