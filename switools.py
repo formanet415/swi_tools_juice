@@ -700,7 +700,7 @@ def erfit_main_beam(CCH, theta, nskyindexes=15, plotstuff=False, verbose=True, i
     return FWHMCCH, sFWHMCCH
     
 
-def full_beam_pattern(ds, nskyindexes=15, start = 0, end = -1, method="threepointstencil",choice="CCH", plotGauss = True, savefig=True):
+def full_beam_pattern(ds, nskyindexes=15, start = 0, end = -1, method="threepointstencil",choice="CCH", plotGauss = True, plotSidelobemodel = True, savefig=True):
     """
     This function differentiates the continuum channel data (or integrated CTS) with respect to angle. The data is plotted with uncertainties in dB scale. Fit of the beam pattern and sidelobes to be implemented.
     input:
@@ -778,27 +778,6 @@ def full_beam_pattern(ds, nskyindexes=15, start = 0, end = -1, method="threepoin
         raise NotImplementedError
     else:
         raise NotImplementedError
-    
-    # save the differentiated data to a file
-    diff_data = {
-        'theta1': theta1,
-        'dCH1dtheta': dCH1dtheta,
-        'sdCH1dtheta': sdCH1dtheta,
-        'theta2': theta2,
-        'dCH2dtheta': dCH2dtheta,
-        'sdCH2dtheta': sdCH2dtheta
-    }
-    # save ascii
-    diff_file = os.path.join('differentiated', f'diff_data_{int(ds.OBSID.data[0])}.txt')
-    if not os.path.exists('differentiated'):
-        os.makedirs('differentiated')
-    np.savetxt(diff_file, 
-               np.column_stack((theta1[1:-1], dCH1dtheta, sdCH1dtheta, theta2[1:-1], dCH2dtheta, sdCH2dtheta)), 
-               header='theta1 dCH1dtheta sdCH1dtheta theta2 dCH2dtheta sdCH2dtheta', 
-               fmt='%f')
-    print(f"Saved differentiated data to {diff_file}")
-
-
     
     # commented for now
     #theta1 = theta1 - theta1[np.argmax(dCH1dtheta)]
@@ -905,7 +884,8 @@ def full_beam_pattern(ds, nskyindexes=15, start = 0, end = -1, method="threepoin
     # error plot in dB using errorplot_in_dB()
     fig, axs = plt.subplots(1,2,figsize=(12,4))
     errorplot_in_dB(axs[0], theta1[1:-1], -dCH1dtheta, sdCH1dtheta, label='Data')
-    axs[0].plot(fmtheta1, 10 * np.log10(fitted_model1), label="Fitted sidelobe model", linestyle="--", marker = '', color="red")
+    if plotSidelobemodel:
+        axs[0].plot(fmtheta1, 10 * np.log10(fitted_model1), label="Fitted sidelobe model", linestyle="--", marker = '', color="red")
     if plotGauss:
         axs[0].plot(fmtheta1, 10 * np.log10(Gauss(fmtheta1,amp1,x01,sig1)), label="Fitted Gaussian", linestyle=":", marker = '', color="green")
     axs[0].set_title(f"Beam pattern {choice}1 ObsID: {ds.OBSID.data[0]:.0f}")
@@ -923,22 +903,28 @@ def full_beam_pattern(ds, nskyindexes=15, start = 0, end = -1, method="threepoin
                     textcoords="offset points", ha="center", va="bottom", fontsize=10, color="black")
     axs[0].legend(loc=2)
     # Add text box with fit parameters (beta and FWHM) in the top right corner
-    if plotGauss:
+    if plotGauss and plotSidelobemodel:
         axs[0].text(0.95, 0.95, 
                 f"   β = ({beta_fit1:.2f} ± {beta_err1:.2f}) \nFWHM = ({FWHM1:.2f} ± {sFWHM1:.2f})'", 
                 transform=axs[0].transAxes, fontsize=10, verticalalignment='top', horizontalalignment='right', 
                 bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
-    else:
+    elif plotSidelobemodel:
         axs[0].text(0.95, 0.95, 
                 f"   β = ({beta_fit1:.2f} ± {beta_err1:.2f})", 
                 transform=axs[0].transAxes, fontsize=10, verticalalignment='top', horizontalalignment='right', 
+                bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
+    else:
+        axs[0].text(0.95, 0.95, 
+                f"FWHM = ({FWHM1:.2f} ± {sFWHM1:.2f})'",
+                transform=axs[0].transAxes, fontsize=10, verticalalignment='top', horizontalalignment='right',
                 bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
 
     
 
     
     errorplot_in_dB(axs[1], theta2[1:-1], -dCH2dtheta, sdCH2dtheta, label='Data')
-    axs[1].plot(fmtheta2, 10 * np.log10(fitted_model2), label="Fitted sidelobe model", linestyle="--", marker = '', color="red")
+    if plotSidelobemodel:
+        axs[1].plot(fmtheta2, 10 * np.log10(fitted_model2), label="Fitted sidelobe model", linestyle="--", marker = '', color="red")
     if plotGauss:
         axs[1].plot(fmtheta2, 10 * np.log10(Gauss(fmtheta2,amp2,x02,sig2)), label="Fitted Gaussian", linestyle=":", marker = '', color="green")
     axs[1].set_title(f"Beam pattern {choice}2 ObsID: {ds.OBSID.data[0]:.0f}")
@@ -955,15 +941,20 @@ def full_beam_pattern(ds, nskyindexes=15, start = 0, end = -1, method="threepoin
                     xytext=(axs[0].get_xlim()[1] -100, axs[0].get_ylim()[0] + 5), 
                     textcoords="offset points", ha="center", va="bottom", fontsize=10, color="black")
     axs[1].legend(loc=2)
-    if plotGauss:
+    if plotGauss and plotSidelobemodel:
         axs[1].text(0.95, 0.95, 
                 f"   β = ({beta_fit2:.2f} ± {beta_err2:.2f}) \nFWHM = ({FWHM2:.2f} ± {sFWHM2:.2f})'", 
                 transform=axs[1].transAxes, fontsize=10, verticalalignment='top', horizontalalignment='right', 
                 bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
-    else:
+    elif plotSidelobemodel:
         axs[1].text(0.95, 0.95, 
                 f"   β = ({beta_fit2:.2f} ± {beta_err2:.2f})", 
                 transform=axs[1].transAxes, fontsize=10, verticalalignment='top', horizontalalignment='right', 
+                bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
+    else:
+        axs[1].text(0.95, 0.95, 
+                f"FWHM = ({FWHM2:.2f} ± {sFWHM2:.2f})'",
+                transform=axs[1].transAxes, fontsize=10, verticalalignment='top', horizontalalignment='right',
                 bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
 
 
@@ -984,6 +975,35 @@ def full_beam_pattern(ds, nskyindexes=15, start = 0, end = -1, method="threepoin
     #plt.grid(linestyle='--', alpha=0.5)
     #plt.tight_layout()
     #plt.show()
+
+    # save the differentiated data to a file
+    diff_data = {
+        'theta1': theta1,
+        'dCH1dtheta': dCH1dtheta,
+        'sdCH1dtheta': sdCH1dtheta,
+        'theta2': theta2,
+        'dCH2dtheta': dCH2dtheta,
+        'sdCH2dtheta': sdCH2dtheta
+    }
+    # save ascii
+    diff_file = os.path.join('differentiated', f'diff_data_{int(ds.OBSID.data[0])}_start{start}_end{end}.txt')
+    if not os.path.exists('differentiated'):
+        os.makedirs('differentiated')
+    dCH1dtheta_normalized = -dCH1dtheta / Gauss(0,amp1,0,sig1) / np.max(-dCH1dtheta)
+    dCH2dtheta_normalized = -dCH2dtheta / Gauss(0,amp2,0,sig2) / np.max(-dCH2dtheta)
+    sdCH1dtheta_normalized = -sdCH1dtheta / Gauss(0,amp1,0,sig1) / np.max(-dCH1dtheta)
+    sdCH2dtheta_normalized = -sdCH2dtheta / Gauss(0,amp2,0,sig2) / np.max(-dCH2dtheta)
+
+
+    refLO1 = 562.95
+    refLO2 = 1119.33
+
+    np.savetxt(diff_file, 
+               np.column_stack((theta1[1:-1]*ds.LO1.data[0]/refLO1, dCH1dtheta_normalized, sdCH1dtheta_normalized,
+                                theta2[1:-1]*ds.LO2.data[0]/refLO2, dCH2dtheta_normalized, sdCH2dtheta_normalized)),
+               header='theta1 dCH1dtheta_normalized sdCH1dtheta theta2 dCH2dtheta_normalized sdCH2dtheta', 
+               fmt='%f')
+    print(f"Saved differentiated data to {diff_file}")
 
 
 
@@ -1211,7 +1231,7 @@ def plot_averaged_2D_spectra(ds, lines={}, offset=0.5, verbose=False, noplot=Fal
     if not noplot:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
         fig.suptitle(f'Averaged {ds.TARGET.data[0]} spectrum, ObsID: {int(ds.OBSID.data[0])}')
-        ax1.set_title("LO1: %.1f GHz" % ds.LO1.data[0])
+        ax1.set_title("LO1: %.3f GHz" % ds.LO1.data[0])
         ax1.plot(lsb1[10:-10], avgCTS1[10:-10],label="CTS1",color='black')
         #plt.title("Channel 1")
         #ax1.set_ylim(140,174)
@@ -1226,7 +1246,7 @@ def plot_averaged_2D_spectra(ds, lines={}, offset=0.5, verbose=False, noplot=Fal
 
 
         ax2.plot(lsb2[10:-10], avgCTS2[10:-10], label='CTS2',color='black')
-        ax2.set_title("LO2: %.1f GHz" % ds.LO2.data[0])
+        ax2.set_title("LO2: %.3f GHz" % ds.LO2.data[0])
         #ax2.set_ylim(150,205)
         ax2.set_xlabel("LSB Frequency (GHz)")
         ax2.set_ylabel("$T_{RJ}$ (K)")
